@@ -202,7 +202,7 @@ function getBounds(txns) {
   return { min: [minX, minY], max: [maxX, maxY] };
 }
 
-export async function getStaticProps(context) {
+export async function getServerSideProps(context) {
   const provider = new ethers.providers.EtherscanProvider(
     NETWORK,
     process.env.ETHERSCAN_API_KEY
