@@ -34,6 +34,7 @@ const LETTERS = [
   "Y",
   "Z",
 ];
+const CELL_SIZE = 25;
 
 export default function Home({ txns, viewBox }) {
   const [frames, setFrames] = useState([]);
@@ -100,7 +101,10 @@ export default function Home({ txns, viewBox }) {
   }, []);
 
   return (
-    <div className="py-5">
+    <div
+      className="pb-5"
+      style={{ minWidth: viewBox.w * CELL_SIZE, width: "100vw" }}
+    >
       <Head>
         <title>words3 visualizer</title>
         <meta name="description" content="Visualize actions on words3.xyz" />
@@ -108,11 +112,10 @@ export default function Home({ txns, viewBox }) {
       </Head>
 
       <main>
-        <h1 className="text-center text-3xl font-semibold text-vs-code-blue w-full ">
-          words3 visualizer
-        </h1>
-
-        <div className="sticky top-0 bg-vs-code-bg mt-4 pt-2 pb-8">
+        <div className="fixed md:sticky top-0 bg-vs-code-bg pb-8 px-4 w-[100vw]">
+          <h1 className="pt-5 text-center text-3xl font-semibold text-vs-code-blue w-full ">
+            words3 visualizer
+          </h1>
           <Slider
             txIdx={
               txIdx >= filteredFrameIdxs.length
@@ -126,7 +129,7 @@ export default function Home({ txns, viewBox }) {
             Filter by address:{" "}
             <input
               className={
-                "text-inherit font-mono bg-inherit border border-[#d4d4d4] p-2"
+                "text-inherit font-mono bg-inherit border border-[#d4d4d4] p-2 w-[150px] md:w-[250px]"
               }
               type="string"
               placeholder="address"
@@ -134,32 +137,38 @@ export default function Home({ txns, viewBox }) {
               onChange={(e) => setFilterAddress(e.target.value)}
             />
           </div>
+          {frames.length === 0 && (
+            <div className="text-center pt-4">Loading...</div>
+          )}
         </div>
 
         <div className="text-center mx-auto w-fit">
-          {frames.length > 0
-            ? frames[
-                filteredFrameIdxs[
-                  txIdx >= filteredFrameIdxs.length
-                    ? filteredFrameIdxs.length - 1
-                    : txIdx
-                ]
-              ].grid.map((row, i) => (
-                <div className="flex" key={i}>
-                  {row.map(({ letter, isNew }, j) => (
-                    <div
-                      key={j}
-                      className={
-                        "w-[25px] h-[25px] border border-[#5c5c5c] pb-[2px] " +
-                        (isNew ? "bg-success font-bold text-vs-code-bg" : "")
-                      }
-                    >
-                      {letter}
-                    </div>
-                  ))}
-                </div>
-              ))
-            : "Loading..."}
+          {frames.length > 0 &&
+            frames[
+              filteredFrameIdxs[
+                txIdx >= filteredFrameIdxs.length
+                  ? filteredFrameIdxs.length - 1
+                  : txIdx
+              ]
+            ].grid.map((row, i) => (
+              <div className="flex" key={i}>
+                {row.map(({ letter, isNew }, j) => (
+                  <div
+                    key={j}
+                    className={
+                      "border border-[#5c5c5c] pb-[2px] " +
+                      (isNew ? "bg-success font-bold text-vs-code-bg" : "")
+                    }
+                    style={{
+                      width: CELL_SIZE,
+                      height: CELL_SIZE,
+                    }}
+                  >
+                    {letter}
+                  </div>
+                ))}
+              </div>
+            ))}
         </div>
       </main>
 
@@ -173,7 +182,7 @@ function Slider({ txIdx, setTxIdx, maxVal }) {
 
   return (
     <>
-      <div className="text-center pt-8 pb-2">
+      <div className="text-center pt-4 pb-2">
         Transaction: {txIdx}/{maxVal}{" "}
         <span
           className="px-3 text-xl md:text-2x cursor-pointer"
