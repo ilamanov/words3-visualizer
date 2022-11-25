@@ -1,0 +1,471 @@
+{
+    "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "contract IWorld",
+              "name": "_world",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_components",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "AlreadyClaimedPayout",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "AlreadySetupGrid",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "BoundTooLong",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "BoundsDoNotMatch",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "EmptyLetterInBounds",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "EmptyLetterNotOnExisting",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "GameNotOver",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "GameOver",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidBoundEdges",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidBoundLength",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidCrossProofs",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidEmptyLetterBound",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidWord",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidWordEnd",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidWordStart",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "LetterOnExistingTile",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "LonelyWord",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "NoLettersPlayed",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "PaymentTooLow",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "WordTooLong",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "enum Letter[]",
+              "name": "word",
+              "type": "uint8[]"
+            },
+            {
+              "internalType": "bytes32[]",
+              "name": "proof",
+              "type": "bytes32[]"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "int32",
+                  "name": "x",
+                  "type": "int32"
+                },
+                {
+                  "internalType": "int32",
+                  "name": "y",
+                  "type": "int32"
+                }
+              ],
+              "internalType": "struct Position",
+              "name": "position",
+              "type": "tuple"
+            },
+            {
+              "internalType": "enum Direction",
+              "name": "direction",
+              "type": "uint8"
+            },
+            {
+              "internalType": "contract TileComponent",
+              "name": "tiles",
+              "type": "address"
+            }
+          ],
+          "name": "checkWord",
+          "outputs": [],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "claimPayout",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "endTime",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes",
+              "name": "arguments",
+              "type": "bytes"
+            }
+          ],
+          "name": "execute",
+          "outputs": [
+            {
+              "internalType": "bytes",
+              "name": "",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "enum Letter[]",
+              "name": "word",
+              "type": "uint8[]"
+            },
+            {
+              "internalType": "bytes32[]",
+              "name": "proof",
+              "type": "bytes32[]"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "int32",
+                  "name": "x",
+                  "type": "int32"
+                },
+                {
+                  "internalType": "int32",
+                  "name": "y",
+                  "type": "int32"
+                }
+              ],
+              "internalType": "struct Position",
+              "name": "position",
+              "type": "tuple"
+            },
+            {
+              "internalType": "enum Direction",
+              "name": "direction",
+              "type": "uint8"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint32[]",
+                  "name": "positive",
+                  "type": "uint32[]"
+                },
+                {
+                  "internalType": "uint32[]",
+                  "name": "negative",
+                  "type": "uint32[]"
+                },
+                {
+                  "internalType": "bytes32[][]",
+                  "name": "proofs",
+                  "type": "bytes32[][]"
+                }
+              ],
+              "internalType": "struct Bounds",
+              "name": "bounds",
+              "type": "tuple"
+            }
+          ],
+          "name": "executeTyped",
+          "outputs": [
+            {
+              "internalType": "bytes",
+              "name": "",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "fundTreasury",
+          "outputs": [],
+          "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "enum Letter",
+              "name": "letter",
+              "type": "uint8"
+            }
+          ],
+          "name": "getPriceForLetter",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "enum Letter[]",
+              "name": "word",
+              "type": "uint8[]"
+            }
+          ],
+          "name": "getPriceForWord",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "int256",
+              "name": "sold",
+              "type": "int256"
+            }
+          ],
+          "name": "getTargetSaleTime",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getTreasury",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "int256",
+              "name": "timeSinceStart",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sold",
+              "type": "uint256"
+            }
+          ],
+          "name": "getVRGDAPrice",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "owner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "rewardFraction",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "setupInitialGrid",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "startTime",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "targetPrice",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "vrgdaPerTimeUnit",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "vrgdaPriceDecayPercent",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "vrgdaTargetPrice",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ]
+}
