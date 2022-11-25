@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import { ethers } from "ethers";
 import gameContractAbi from "/lib/gameContractAbi.json";
@@ -35,23 +35,69 @@ const LETTERS = [
   "Z",
 ];
 
-export default function Home({ states }) {
-  const [txIdx, setTxIdx] = useState(states.length - 1);
+export default function Home({ txns, viewBox }) {
+  const [frames, setFrames] = useState([]);
+  const [txIdx, setTxIdx] = useState([]);
   const [filterAddress, setFilterAddress] = useState("");
 
-  let filteredStateIdxs = [...Array(states.length).keys()];
+  let filteredFrameIdxs = [...Array(frames.length).keys()];
   if (filterAddress !== "" && ethers.utils.isAddress(filterAddress)) {
-    filteredStateIdxs = [];
-    for (let i = 0; i < states.length; i++) {
+    filteredFrameIdxs = [];
+    for (let i = 0; i < frames.length; i++) {
       if (
-        states[i].tx &&
-        ethers.utils.getAddress(states[i].tx.from) ===
+        frames[i].tx &&
+        ethers.utils.getAddress(frames[i].tx.from) ===
           ethers.utils.getAddress(filterAddress)
       ) {
-        filteredStateIdxs.push(i);
+        filteredFrameIdxs.push(i);
       }
     }
   }
+
+  useEffect(() => {
+    let grid = [];
+    for (let dy = 0; dy < viewBox.h; dy++) {
+      const row = [];
+      for (let dx = 0; dx < viewBox.w; dx++) {
+        row.push({ letter: null });
+      }
+      grid.push(row);
+    }
+    let gridUnstyled = JSON.parse(JSON.stringify(grid));
+
+    const framesBuilder = [
+      {
+        grid: JSON.parse(JSON.stringify(grid)),
+        tx: null,
+      },
+    ];
+    for (let tx of txns) {
+      grid = JSON.parse(JSON.stringify(gridUnstyled));
+      for (let i = 0; i < tx.word.length; i++) {
+        if (tx.word[i] !== "_") {
+          let thisPosition = [tx.position[0], tx.position[1]];
+          if (tx.direction === 0) {
+            thisPosition[0] += i;
+          } else {
+            thisPosition[1] += i;
+          }
+          grid[thisPosition[1] - viewBox.y][thisPosition[0] - viewBox.x] = {
+            letter: tx.word[i],
+            isNew: true,
+          };
+          gridUnstyled[thisPosition[1] - viewBox.y][
+            thisPosition[0] - viewBox.x
+          ] = { letter: tx.word[i] };
+        }
+      }
+      framesBuilder.push({
+        grid: JSON.parse(JSON.stringify(grid)),
+        tx,
+      });
+    }
+    setFrames(framesBuilder);
+    setTxIdx(framesBuilder.length - 1);
+  }, []);
 
   return (
     <div className="py-5">
@@ -69,12 +115,12 @@ export default function Home({ states }) {
         <div className="sticky top-0 bg-vs-code-bg mt-4 pt-2 pb-8">
           <Slider
             txIdx={
-              txIdx >= filteredStateIdxs.length
-                ? filteredStateIdxs.length - 1
+              txIdx >= filteredFrameIdxs.length
+                ? filteredFrameIdxs.length - 1
                 : txIdx
             }
             setTxIdx={setTxIdx}
-            maxVal={filteredStateIdxs.length - 1}
+            maxVal={filteredFrameIdxs.length - 1}
           />
           <div className="w-fit mx-auto pt-2">
             Filter by address:{" "}
@@ -91,27 +137,29 @@ export default function Home({ states }) {
         </div>
 
         <div className="text-center mx-auto w-fit">
-          {states[
-            filteredStateIdxs[
-              txIdx >= filteredStateIdxs.length
-                ? filteredStateIdxs.length - 1
-                : txIdx
-            ]
-          ].grid.map((row, i) => (
-            <div className="flex" key={i}>
-              {row.map(({ letter, isNew }, j) => (
-                <div
-                  key={j}
-                  className={
-                    "w-[25px] h-[25px] border border-[#5c5c5c] pb-[2px] " +
-                    (isNew ? "bg-success font-bold text-vs-code-bg" : "")
-                  }
-                >
-                  {letter}
+          {frames.length > 0
+            ? frames[
+                filteredFrameIdxs[
+                  txIdx >= filteredFrameIdxs.length
+                    ? filteredFrameIdxs.length - 1
+                    : txIdx
+                ]
+              ].grid.map((row, i) => (
+                <div className="flex" key={i}>
+                  {row.map(({ letter, isNew }, j) => (
+                    <div
+                      key={j}
+                      className={
+                        "w-[25px] h-[25px] border border-[#5c5c5c] pb-[2px] " +
+                        (isNew ? "bg-success font-bold text-vs-code-bg" : "")
+                      }
+                    >
+                      {letter}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ))}
+              ))
+            : "Loading..."}
         </div>
       </main>
 
@@ -202,7 +250,7 @@ function getBounds(txns) {
   return { min: [minX, minY], max: [maxX, maxY] };
 }
 
-export async function getServerSideProps(context) {
+export async function getStaticProps(context) {
   const provider = new ethers.providers.EtherscanProvider(
     NETWORK,
     process.env.ETHERSCAN_API_KEY
@@ -257,50 +305,11 @@ export async function getServerSideProps(context) {
     h: bounds.max[1] - bounds.min[1] + 3,
   };
 
-  let grid = [];
-  for (let dy = 0; dy < viewBox.h; dy++) {
-    const row = [];
-    for (let dx = 0; dx < viewBox.w; dx++) {
-      row.push({ letter: null });
-    }
-    grid.push(row);
-  }
-  let gridUnstyled = JSON.parse(JSON.stringify(grid));
-
-  const states = [
-    {
-      grid: JSON.parse(JSON.stringify(grid)),
-      tx: null,
-    },
-  ];
-  for (let tx of txns) {
-    grid = JSON.parse(JSON.stringify(gridUnstyled));
-    for (let i = 0; i < tx.word.length; i++) {
-      if (tx.word[i] !== "_") {
-        let thisPosition = [tx.position[0], tx.position[1]];
-        if (tx.direction === 0) {
-          thisPosition[0] += i;
-        } else {
-          thisPosition[1] += i;
-        }
-        grid[thisPosition[1] - viewBox.y][thisPosition[0] - viewBox.x] = {
-          letter: tx.word[i],
-          isNew: true,
-        };
-        gridUnstyled[thisPosition[1] - viewBox.y][thisPosition[0] - viewBox.x] =
-          { letter: tx.word[i] };
-      }
-    }
-    states.push({
-      grid: JSON.parse(JSON.stringify(grid)),
-      tx,
-    });
-  }
-
   return {
     props: {
-      states: states,
+      txns: txns,
+      viewBox,
     },
-    // revalidate: 5,
+    revalidate: 5,
   };
 }
