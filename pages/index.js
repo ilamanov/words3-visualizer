@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import Head from "next/head";
 import { ethers } from "ethers";
 import gameContractAbi from "/lib/gameContractAbi.json";
@@ -43,6 +43,187 @@ const LETTERS = [
   "Z",
 ];
 
+export default function Home({ txns, bounds }) {
+  const Viewer = useRef(null);
+  const Container = useRef(null);
+  const [tool, setTool] = useState(TOOL_NONE);
+  const [value, setValue] = useState(
+    fitSelection(INITIAL_VALUE, -10, -10, 20, 20)
+  );
+
+  const viewBox = {
+    x: bounds.min[0] - 1,
+    y: bounds.min[1] - 1,
+    w: bounds.max[0] - bounds.min[0] + 3,
+    h: bounds.max[1] - bounds.min[1] + 3,
+  };
+
+  console.log(viewBox.w, viewBox.h);
+
+  const grid = [];
+  for (let dy = 0; dy < viewBox.h; dy++) {
+    const row = [];
+    for (let dx = 0; dx < viewBox.w; dx++) {
+      row.push(null);
+    }
+    grid.push(row);
+  }
+
+  const states = [
+    {
+      grid: JSON.parse(JSON.stringify(grid)),
+      tx: null,
+    },
+  ];
+  for (let tx of txns) {
+    for (let i = 0; i < tx.word.length; i++) {
+      if (tx.word[i] !== "_") {
+        let thisPosition = [tx.position[0], tx.position[1]];
+        if (tx.direction === 0) {
+          thisPosition[0] += i;
+        } else {
+          thisPosition[1] += i;
+        }
+        grid[thisPosition[1] - viewBox.y][thisPosition[0] - viewBox.x] =
+          tx.word[i];
+      }
+    }
+    states.push({
+      grid: JSON.parse(JSON.stringify(grid)),
+      tx,
+    });
+  }
+
+  useEffect(() => {
+    Viewer.current.fitToViewer();
+  }, []);
+
+  const _zoomOnViewerCenter1 = () => Viewer.current.zoomOnViewerCenter(1.1);
+  const _fitSelection1 = () => Viewer.current.fitSelection(40, 40, 200, 200);
+  const _fitToViewer1 = () => Viewer.current.fitToViewer();
+
+  /* keep attention! handling the state in the following way doesn't fire onZoom and onPam hooks */
+  const _zoomOnViewerCenter2 = () => setValue(zoomOnViewerCenter(value, 1.1));
+  const _fitSelection2 = () => setValue();
+  const _fitToViewer2 = () => setValue(fitToViewer(value));
+
+  const rects = [
+    <text x={0} y={0} class="small">
+      My
+    </text>,
+  ];
+  for (let dy = 0; dy < viewBox.h; dy++) {
+    for (let dx = 0; dx < viewBox.w; dx++) {
+      const letter = states[5].grid[dy][dx];
+      if (letter) {
+        rects.push(
+          // <text x={20*(dx + viewBox.x)} y={20*(dy + viewBox.y)} class="small">
+          //   My
+          // </text>
+          <rect
+            x={20 * (dx + viewBox.x)}
+            y={20 * (dy + viewBox.y)}
+            width="1"
+            height="1"
+            fill={"red"}
+            // stroke={"#FBE14C"}
+            // strokeWidth={true ? 2 : 0}
+          />
+        );
+      } else {
+        rects.push(
+          <rect
+            x={20 * (dx + viewBox.x)}
+            y={20 * (dy + viewBox.y)}
+            width="20"
+            height="20"
+            fill={"#bfe2ff"}
+            // stroke={"#FBE14C"}
+            // strokeWidth={true ? 2 : 0}
+          />
+        );
+      }
+    }
+  }
+
+  return (
+    <div className="py-5">
+      <Head>
+        <title>words3 visualizer</title>
+        <meta name="description" content="Visualize actions on words3.xyz" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+
+      <main>
+        <h1 className="text-center text-3xl font-semibold text-vs-code-blue w-full ">
+          words3 visualizer
+        </h1>
+
+        <Button onClick={() => _zoomOnViewerCenter1()}>
+          Zoom on center (mode 1)
+        </Button>
+        <Button onClick={() => _fitSelection1()}>
+          Zoom area 200x200 (mode 1)
+        </Button>
+        <Button onClick={() => _fitToViewer1()}>Fit (mode 1)</Button>
+
+        <Button onClick={() => _zoomOnViewerCenter2()}>
+          Zoom on center (mode 2)
+        </Button>
+        <Button onClick={() => _fitSelection2()}>
+          Zoom area 200x200 (mode 2)
+        </Button>
+        <Button onClick={() => _fitToViewer2()}>Fit (mode 2)</Button>
+
+        <div className="w-full h-[80vh]" ref={Container}>
+          <ReactSVGPanZoom
+            ref={Viewer}
+            width={Container.current ? Container.current.clientWidth : 1500}
+            height={Container.current ? Container.current.clientHeight : 1000}
+            tool={tool}
+            onChangeTool={setTool}
+            value={value}
+            onChangeValue={setValue}
+            onZoom={(e) => console.log("zoom")}
+            onPan={(e) => console.log("pan")}
+            onClick={(event) =>
+              console.log("click", event.x, event.y, event.originalEvent)
+            }
+          >
+            <svg
+              width="100%"
+              height="1000px"
+              viewBox={`${20 * viewBox.x} ${20 * viewBox.y} ${20 * viewBox.w} ${
+                20 * viewBox.h
+              }`}
+              version="1.1"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {rects}
+            </svg>
+          </ReactSVGPanZoom>
+        </div>
+
+        {txns.map((txn) => (
+          <div>
+            {txn.hash} {txn.word} {txn.position} {txn.direction}
+          </div>
+        ))}
+      </main>
+
+      <footer></footer>
+    </div>
+  );
+}
+
+function Button({ onClick, children }) {
+  return (
+    <button className="p-1 border border-vs-code-text" onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
 function getBounds(txns) {
   let minX = Infinity;
   let minY = Infinity;
@@ -76,195 +257,6 @@ function getBounds(txns) {
   return { min: [minX, minY], max: [maxX, maxY] };
 }
 
-export default function Home({ txns }) {
-  const bounds = getBounds(txns);
-  console.log("bounds", bounds);
-
-  const svgRef = useRef(null);
-  const svgContainerRef = useRef(null);
-
-  const Viewer = useRef(null);
-  const [tool, setTool] = useState(TOOL_NONE);
-  const [value, setValue] = useState(INITIAL_VALUE);
-
-  useEffect(() => {
-    Viewer.current.fitToViewer();
-  }, []);
-
-  const _zoomOnViewerCenter1 = () => Viewer.current.zoomOnViewerCenter(1.1);
-  const _fitSelection1 = () => Viewer.current.fitSelection(40, 40, 200, 200);
-  const _fitToViewer1 = () => Viewer.current.fitToViewer();
-
-  /* keep attention! handling the state in the following way doesn't fire onZoom and onPam hooks */
-  const _zoomOnViewerCenter2 = () => setValue(zoomOnViewerCenter(value, 1.1));
-  const _fitSelection2 = () => setValue(fitSelection(value, 40, 40, 200, 200));
-  const _fitToViewer2 = () => setValue(fitToViewer(value));
-
-  const [viewBox, setViewBox] = useState({
-    x: bounds.min[0] - 1,
-    y: bounds.min[1] - 1,
-    w: bounds.max[0] - bounds.min[0] + 3,
-    h: bounds.max[1] - bounds.min[1] + 3,
-  });
-  const [scale, setScale] = useState(1);
-  const [isPanning, setIsPanning] = useState(false);
-  const [startPoint, setStartPoint] = useState(null);
-  const [endPoint, setEndPoint] = useState(null);
-
-  // useEffect(() => {
-  //   function handleWheel(e) {
-  //     e.preventDefault();
-  //     const dw = -viewBox.w * Math.sign(e.deltaY) * 0.05;
-  //     const dh = -viewBox.h * Math.sign(e.deltaY) * 0.05;
-  //     // console.log("dw, dh", dw, dh);
-  //     // const rect = e.target.getBoundingClientRect();
-  //     // const mx = e.clientX - rect.left; //mouse x
-  //     // const my = e.clientY - rect.top;
-  //     const mx = e.clientX; //mouse x
-  //     const my = e.clientY;
-  //     // console.log("mx, my", mx, my);
-  //     const dx = (dw * mx) / svgRef.current.clientWidth;
-  //     const dy = (dh * my) / svgRef.current.clientHeight;
-  //     // console.log("dx, dy", dx, dy);
-  //     const tmpViewBox = {
-  //       x: viewBox.x + dx,
-  //       y: viewBox.y + dy,
-  //       w: viewBox.w - dw,
-  //       h: viewBox.h - dh,
-  //     };
-  //     setScale(svgRef.current.clientWidth / tmpViewBox.w);
-  //     setViewBox(tmpViewBox);
-  //   }
-  //   svgContainerRef.current.addEventListener("wheel", handleWheel, {
-  //     passive: false,
-  //   });
-  //   return function cleanup() {
-  //     svgContainerRef.current.removeEventListener("wheel", handleWheel, {
-  //       passive: false,
-  //     });
-  //   };
-  // });
-
-  return (
-    <div className="py-5">
-      <Head>
-        <title>words3 visualizer</title>
-        <meta name="description" content="Visualize actions on words3.xyz" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <main>
-        <h1 className="text-center text-3xl font-semibold text-vs-code-blue w-full ">
-          words3 visualizer
-        </h1>
-
-        {/* <div
-          ref={svgContainerRef}
-          onMouseDown={(e) => {
-            setIsPanning(true);
-            setStartPoint({ x: e.clientX, y: e.clientY });
-          }}
-          onMouseMove={(e) => {
-            if (isPanning) {
-              const tmpEndPoint = { x: e.clientX, y: e.clientY };
-              setEndPoint(tmpEndPoint);
-              var dx = (startPoint.x - tmpEndPoint.x) / scale;
-              var dy = (startPoint.y - tmpEndPoint.y) / scale;
-              setViewBox({
-                x: viewBox.x + dx,
-                y: viewBox.y + dy,
-                w: viewBox.w,
-                h: viewBox.h,
-              });
-            }
-          }}
-          onMouseUp={(e) => {
-            if (isPanning) {
-              const tmpEndPoint = { x: e.clientX, y: e.clientY };
-              setEndPoint(tmpEndPoint);
-              var dx = (startPoint.x - tmpEndPoint.x) / scale;
-              var dy = (startPoint.y - tmpEndPoint.y) / scale;
-              setViewBox({
-                x: viewBox.x + dx,
-                y: viewBox.y + dy,
-                w: viewBox.w,
-                h: viewBox.h,
-              });
-              setIsPanning(false);
-            }
-          }}
-          onMouseLeave={(e) => {
-            setIsPanning(false);
-          }}
-        > */}
-        <button className="btn" onClick={() => _zoomOnViewerCenter1()}>
-          Zoom on center (mode 1)
-        </button>
-        <button className="btn" onClick={() => _fitSelection1()}>
-          Zoom area 200x200 (mode 1)
-        </button>
-        <button className="btn" onClick={() => _fitToViewer1()}>
-          Fit (mode 1)
-        </button>
-        <hr />
-
-        <button className="btn" onClick={() => _zoomOnViewerCenter2()}>
-          Zoom on center (mode 2)
-        </button>
-        <button className="btn" onClick={() => _fitSelection2()}>
-          Zoom area 200x200 (mode 2)
-        </button>
-        <button className="btn" onClick={() => _fitToViewer2()}>
-          Fit (mode 2)
-        </button>
-        <hr />
-
-        <ReactSVGPanZoom
-          ref={Viewer}
-          width={500}
-          height={500}
-          tool={tool}
-          onChangeTool={setTool}
-          value={value}
-          onChangeValue={setValue}
-          onZoom={(e) => console.log("zoom")}
-          onPan={(e) => console.log("pan")}
-          onClick={(event) =>
-            console.log("click", event.x, event.y, event.originalEvent)
-          }
-        >
-          <svg
-            ref={svgRef}
-            width="100%"
-            height="1000px"
-            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
-            version="1.1"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect
-              x={10}
-              y={10}
-              width="10"
-              height="10"
-              fill={"#bfe2ff"}
-              // stroke={"#FBE14C"}
-              // strokeWidth={true ? 2 : 0}
-            />
-          </svg>
-        </ReactSVGPanZoom>
-
-        {txns.map((txn) => (
-          <div>
-            {txn.hash} {txn.word} {txn.position} {txn.direction}
-          </div>
-        ))}
-      </main>
-
-      <footer></footer>
-    </div>
-  );
-}
-
 export async function getStaticProps(context) {
   const provider = new ethers.providers.EtherscanProvider(
     NETWORK,
@@ -274,7 +266,16 @@ export async function getStaticProps(context) {
   const history = (await provider.getHistory(GAME_CONTRACT_ADDRESS)).slice(3); // we skip first 3 txns because they are for setting up the game
 
   const gameContractAddress = ethers.utils.getAddress(GAME_CONTRACT_ADDRESS);
-  const historyFormatted = [];
+  const historyFormatted = [
+    {
+      hash: null,
+      from: null,
+      value: null,
+      word: "INFINITE",
+      position: [0, 0],
+      direction: 0,
+    },
+  ];
   for (let txn of history) {
     if (ethers.utils.getAddress(txn.to) !== gameContractAddress) {
       continue;
@@ -299,9 +300,12 @@ export async function getStaticProps(context) {
     });
   }
 
+  const bounds = getBounds(historyFormatted);
+
   return {
     props: {
       txns: historyFormatted,
+      bounds: bounds,
     },
     revalidate: 5,
   };
