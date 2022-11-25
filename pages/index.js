@@ -1,15 +1,7 @@
-import { useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import Head from "next/head";
 import { ethers } from "ethers";
 import gameContractAbi from "/lib/gameContractAbi.json";
-import {
-  INITIAL_VALUE,
-  ReactSVGPanZoom,
-  TOOL_NONE,
-  fitSelection,
-  zoomOnViewerCenter,
-  fitToViewer,
-} from "react-svg-pan-zoom";
 
 const NETWORK = "optimism";
 const GAME_CONTRACT_ADDRESS = "0x1b16b25dbdc8ae5775290101332a5e7379eecf9f";
@@ -43,105 +35,20 @@ const LETTERS = [
   "Z",
 ];
 
-export default function Home({ txns, bounds }) {
-  const Viewer = useRef(null);
-  const Container = useRef(null);
-  const [tool, setTool] = useState(TOOL_NONE);
-  const [value, setValue] = useState(
-    fitSelection(INITIAL_VALUE, -10, -10, 20, 20)
-  );
+export default function Home({ states }) {
+  const [txIdx, setTxIdx] = useState(states.length - 1);
+  const [filterAddress, setFilterAddress] = useState("");
 
-  const viewBox = {
-    x: bounds.min[0] - 1,
-    y: bounds.min[1] - 1,
-    w: bounds.max[0] - bounds.min[0] + 3,
-    h: bounds.max[1] - bounds.min[1] + 3,
-  };
-
-  console.log(viewBox.w, viewBox.h);
-
-  const grid = [];
-  for (let dy = 0; dy < viewBox.h; dy++) {
-    const row = [];
-    for (let dx = 0; dx < viewBox.w; dx++) {
-      row.push(null);
-    }
-    grid.push(row);
-  }
-
-  const states = [
-    {
-      grid: JSON.parse(JSON.stringify(grid)),
-      tx: null,
-    },
-  ];
-  for (let tx of txns) {
-    for (let i = 0; i < tx.word.length; i++) {
-      if (tx.word[i] !== "_") {
-        let thisPosition = [tx.position[0], tx.position[1]];
-        if (tx.direction === 0) {
-          thisPosition[0] += i;
-        } else {
-          thisPosition[1] += i;
-        }
-        grid[thisPosition[1] - viewBox.y][thisPosition[0] - viewBox.x] =
-          tx.word[i];
-      }
-    }
-    states.push({
-      grid: JSON.parse(JSON.stringify(grid)),
-      tx,
-    });
-  }
-
-  useEffect(() => {
-    Viewer.current.fitToViewer();
-  }, []);
-
-  const _zoomOnViewerCenter1 = () => Viewer.current.zoomOnViewerCenter(1.1);
-  const _fitSelection1 = () => Viewer.current.fitSelection(40, 40, 200, 200);
-  const _fitToViewer1 = () => Viewer.current.fitToViewer();
-
-  /* keep attention! handling the state in the following way doesn't fire onZoom and onPam hooks */
-  const _zoomOnViewerCenter2 = () => setValue(zoomOnViewerCenter(value, 1.1));
-  const _fitSelection2 = () => setValue();
-  const _fitToViewer2 = () => setValue(fitToViewer(value));
-
-  const rects = [
-    <text x={0} y={0} class="small">
-      My
-    </text>,
-  ];
-  for (let dy = 0; dy < viewBox.h; dy++) {
-    for (let dx = 0; dx < viewBox.w; dx++) {
-      const letter = states[5].grid[dy][dx];
-      if (letter) {
-        rects.push(
-          // <text x={20*(dx + viewBox.x)} y={20*(dy + viewBox.y)} class="small">
-          //   My
-          // </text>
-          <rect
-            x={20 * (dx + viewBox.x)}
-            y={20 * (dy + viewBox.y)}
-            width="1"
-            height="1"
-            fill={"red"}
-            // stroke={"#FBE14C"}
-            // strokeWidth={true ? 2 : 0}
-          />
-        );
-      } else {
-        rects.push(
-          <rect
-            x={20 * (dx + viewBox.x)}
-            y={20 * (dy + viewBox.y)}
-            width="20"
-            height="20"
-            fill={"#bfe2ff"}
-            // stroke={"#FBE14C"}
-            // strokeWidth={true ? 2 : 0}
-          />
-        );
+  let filteredStateIdxs = [...Array(states.length).keys()];
+  if (filterAddress !== "" && ethers.utils.isAddress(filterAddress)) {
+    filteredStateIdxs = [];
+    for (let i = 0; i < states.length; i++) {
+      if (
+        states[i].tx &&
+        ethers.utils.getAddress(states[i].tx.from) ===
+          ethers.utils.getAddress(filterAddress)
+      ) {
+        filteredStateIdxs.push(i);
       }
     }
   }
@@ -159,60 +66,98 @@ export default function Home({ txns, bounds }) {
           words3 visualizer
         </h1>
 
-        <Button onClick={() => _zoomOnViewerCenter1()}>
-          Zoom on center (mode 1)
-        </Button>
-        <Button onClick={() => _fitSelection1()}>
-          Zoom area 200x200 (mode 1)
-        </Button>
-        <Button onClick={() => _fitToViewer1()}>Fit (mode 1)</Button>
-
-        <Button onClick={() => _zoomOnViewerCenter2()}>
-          Zoom on center (mode 2)
-        </Button>
-        <Button onClick={() => _fitSelection2()}>
-          Zoom area 200x200 (mode 2)
-        </Button>
-        <Button onClick={() => _fitToViewer2()}>Fit (mode 2)</Button>
-
-        <div className="w-full h-[80vh]" ref={Container}>
-          <ReactSVGPanZoom
-            ref={Viewer}
-            width={Container.current ? Container.current.clientWidth : 1500}
-            height={Container.current ? Container.current.clientHeight : 1000}
-            tool={tool}
-            onChangeTool={setTool}
-            value={value}
-            onChangeValue={setValue}
-            onZoom={(e) => console.log("zoom")}
-            onPan={(e) => console.log("pan")}
-            onClick={(event) =>
-              console.log("click", event.x, event.y, event.originalEvent)
+        <div className="sticky top-0 bg-vs-code-bg mt-4 pt-2 pb-8">
+          <Slider
+            txIdx={
+              txIdx >= filteredStateIdxs.length
+                ? filteredStateIdxs.length - 1
+                : txIdx
             }
-          >
-            <svg
-              width="100%"
-              height="1000px"
-              viewBox={`${20 * viewBox.x} ${20 * viewBox.y} ${20 * viewBox.w} ${
-                20 * viewBox.h
-              }`}
-              version="1.1"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {rects}
-            </svg>
-          </ReactSVGPanZoom>
+            setTxIdx={setTxIdx}
+            maxVal={filteredStateIdxs.length - 1}
+          />
+          <div className="w-fit mx-auto pt-2">
+            Filter by address:{" "}
+            <input
+              className={
+                "text-inherit font-mono bg-inherit border border-[#d4d4d4] p-2"
+              }
+              type="string"
+              placeholder="address"
+              value={filterAddress}
+              onChange={(e) => setFilterAddress(e.target.value)}
+            />
+          </div>
         </div>
 
-        {txns.map((txn) => (
-          <div>
-            {txn.hash} {txn.word} {txn.position} {txn.direction}
-          </div>
-        ))}
+        <div className="text-center mx-auto w-fit">
+          {states[
+            filteredStateIdxs[
+              txIdx >= filteredStateIdxs.length
+                ? filteredStateIdxs.length - 1
+                : txIdx
+            ]
+          ].grid.map((row, i) => (
+            <div className="flex" key={i}>
+              {row.map(({ letter, isNew }, j) => (
+                <div
+                  key={j}
+                  className={
+                    "w-[25px] h-[25px] border border-[#5c5c5c] pb-[2px] " +
+                    (isNew ? "bg-success font-bold text-vs-code-bg" : "")
+                  }
+                >
+                  {letter}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </main>
 
-      <footer></footer>
+      <footer className="mt-8"></footer>
     </div>
+  );
+}
+
+function Slider({ txIdx, setTxIdx, maxVal }) {
+  const [intervalId, setIntervalId] = useState(null);
+
+  return (
+    <>
+      <div className="text-center pt-8 pb-2">
+        Transaction: {txIdx}/{maxVal}{" "}
+        <span
+          className="px-3 text-xl md:text-2x cursor-pointer"
+          onClick={(e) => {
+            if (intervalId) {
+              clearInterval(intervalId);
+              setIntervalId(null);
+            } else {
+              setIntervalId(
+                setInterval(
+                  () => setTxIdx((curr) => Math.min(curr + 1, maxVal)),
+                  700
+                )
+              );
+            }
+          }}
+        >
+          {intervalId ? "⏸️" : "▶️"}
+        </span>
+      </div>
+      <div className="w-fit mx-auto pb-2">
+        <input
+          className="w-[300px] md:w-[450px]"
+          type="range"
+          name="Transaction Index"
+          min="0"
+          max={maxVal}
+          value={txIdx}
+          onChange={(e) => setTxIdx(parseInt(e.target.value))}
+        />
+      </div>
+    </>
   );
 }
 
@@ -264,48 +209,97 @@ export async function getStaticProps(context) {
   );
   const iface = new ethers.utils.Interface(gameContractAbi.abi);
   const history = (await provider.getHistory(GAME_CONTRACT_ADDRESS)).slice(3); // we skip first 3 txns because they are for setting up the game
-
   const gameContractAddress = ethers.utils.getAddress(GAME_CONTRACT_ADDRESS);
-  const historyFormatted = [
+
+  const formattedHistory = history
+    .filter((tx) => {
+      const parsed = iface.parseTransaction({
+        data: tx.data,
+        value: tx.value,
+      });
+      return (
+        ethers.utils.getAddress(tx.to) === gameContractAddress &&
+        parsed.name === "executeTyped"
+      );
+    })
+    .map((tx) => {
+      const parsed = iface.parseTransaction({
+        data: tx.data,
+        value: tx.value,
+      });
+      return {
+        hash: tx.hash,
+        from: tx.from,
+        value: tx.value.toString(),
+        word: parsed.args.word.map((idx) => LETTERS[idx]).join(""),
+        position: parsed.args.position,
+        direction: parsed.args.direction,
+      };
+    });
+
+  const txns = [
     {
       hash: null,
-      from: null,
+      from: "0x1b16b25dbdc8ae5775290101332a5e7379eecf9f",
       value: null,
       word: "INFINITE",
       position: [0, 0],
       direction: 0,
     },
+  ].concat(formattedHistory);
+
+  const bounds = getBounds(txns);
+
+  const viewBox = {
+    x: bounds.min[0] - 1,
+    y: bounds.min[1] - 1,
+    w: bounds.max[0] - bounds.min[0] + 3,
+    h: bounds.max[1] - bounds.min[1] + 3,
+  };
+
+  let grid = [];
+  for (let dy = 0; dy < viewBox.h; dy++) {
+    const row = [];
+    for (let dx = 0; dx < viewBox.w; dx++) {
+      row.push({ letter: null });
+    }
+    grid.push(row);
+  }
+  let gridUnstyled = JSON.parse(JSON.stringify(grid));
+
+  const states = [
+    {
+      grid: JSON.parse(JSON.stringify(grid)),
+      tx: null,
+    },
   ];
-  for (let txn of history) {
-    if (ethers.utils.getAddress(txn.to) !== gameContractAddress) {
-      continue;
+  for (let tx of txns) {
+    grid = JSON.parse(JSON.stringify(gridUnstyled));
+    for (let i = 0; i < tx.word.length; i++) {
+      if (tx.word[i] !== "_") {
+        let thisPosition = [tx.position[0], tx.position[1]];
+        if (tx.direction === 0) {
+          thisPosition[0] += i;
+        } else {
+          thisPosition[1] += i;
+        }
+        grid[thisPosition[1] - viewBox.y][thisPosition[0] - viewBox.x] = {
+          letter: tx.word[i],
+          isNew: true,
+        };
+        gridUnstyled[thisPosition[1] - viewBox.y][thisPosition[0] - viewBox.x] =
+          { letter: tx.word[i] };
+      }
     }
-
-    const parsed = iface.parseTransaction({ data: txn.data, value: txn.value });
-    if (parsed.name !== "executeTyped") {
-      continue;
-    }
-
-    const word = parsed.args.word.map((idx) => LETTERS[idx]).join("");
-    const position = parsed.args.position;
-    const direction = parsed.args.direction;
-
-    historyFormatted.push({
-      hash: txn.hash,
-      from: txn.from,
-      value: txn.value.toString(),
-      word,
-      position,
-      direction,
+    states.push({
+      grid: JSON.parse(JSON.stringify(grid)),
+      tx,
     });
   }
 
-  const bounds = getBounds(historyFormatted);
-
   return {
     props: {
-      txns: historyFormatted,
-      bounds: bounds,
+      states: states,
     },
     revalidate: 5,
   };
